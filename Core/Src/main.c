@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "BMPXX80.h"
+#include "lcd16x2.h"
+#include "math.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,6 +50,7 @@ TIM_HandleTypeDef htim4;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+uint8_t display_mode = 2; // 0 - temperature, 1 - setpoint, 2 - control signal
 
 //OBJECT PARAMETERS
 const float T = 475;
@@ -55,7 +58,7 @@ const float tau = 5;
 const float k = 4.4;
 
 //SETPOINT
-const float setpoint = 30.0;
+float setpoint = 30.0;
 
 //DIGITAL PI PARAMETERS
 float Kp = 0.7*T/(tau*k);
@@ -66,6 +69,8 @@ float Ts = 1.0;
 
 //FEEDBACK
 float temperature;
+float prev_temperature;
+int prev_heating;
 
 //CONTROL SIGNAL
 uint16_t duty;
@@ -85,7 +90,6 @@ static void MX_TIM4_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 
 /* USER CODE END 0 */
 
@@ -123,9 +127,47 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 
+  void update_display()
+  {
+	lcd16x2_clear();
+	lcd16x2_setCursor(0, 0);
+
+	switch(display_mode)
+	{
+		case 0:
+			lcd16x2_printf("Temperature: ");
+
+			lcd16x2_setCursor(1, 9);
+			lcd16x2_printf("%.2f'C", temperature);
+			break;
+
+		case 1:
+			lcd16x2_printf("Setpoint: ");
+
+			lcd16x2_setCursor(1, 9);
+			lcd16x2_printf("%.2f'C", setpoint);
+			break;
+
+		case 2:
+			lcd16x2_printf("Heating: ");
+
+			lcd16x2_setCursor(1, 14);
+			char text[5];
+			sprintf(text, "%d", duty/10);
+			lcd16x2_printf(text);
+			break;
+	}
+  }
+
   BMP280_Init(&hi2c1, 1, 3, 1); //temperature sensor
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1); //control signal
   HAL_TIM_Base_Start_IT(&htim4); //fixed sampling time Tp = 1sec
+
+  lcd16x2_init_4bits(LCD_RS_GPIO_Port, LCD_RS_Pin, LCD_E_Pin,
+        LCD_D4_GPIO_Port, LCD_D4_Pin, LCD_D5_Pin, LCD_D6_Pin, LCD_D7_Pin);
+
+  lcd16x2_cursorShow(0);
+  update_display();
 
   /* USER CODE END 2 */
 
@@ -133,7 +175,18 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  temperature = BMP280_ReadTemperature();
+	temperature = BMP280_ReadTemperature();
+
+	if((fabs(prev_temperature - temperature) > 0.05) && display_mode == 0)
+	{
+		 update_display();
+		 prev_temperature = temperature;
+	}
+	else if(prev_heating != (duty/10))
+	{
+		update_display();
+		prev_heating = duty/10;
+	}
 
     /* USER CODE END WHILE */
 
@@ -406,6 +459,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, LCD_D4_Pin|LCD_D5_Pin|LCD_D6_Pin|LCD_D7_Pin
+                          |LCD_RS_Pin|LCD_E_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
@@ -414,11 +471,20 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : LCD_D4_Pin LCD_D5_Pin LCD_D6_Pin LCD_D7_Pin
+                           LCD_RS_Pin LCD_E_Pin */
+  GPIO_InitStruct.Pin = LCD_D4_Pin|LCD_D5_Pin|LCD_D6_Pin|LCD_D7_Pin
+                          |LCD_RS_Pin|LCD_E_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
 }
@@ -435,8 +501,8 @@ void PID()
 	//I
 	float integral = (error + prev_error + prev_integral);
 	float I = Kp/Ti * Ts/2 * integral;
-
 	prev_integral = integral;
+
 	prev_error = error;
 
 	u = P + I;
