@@ -135,26 +135,29 @@ int main(void)
 	switch(display_mode)
 	{
 		case 0:
-			lcd16x2_printf("Temperature: ");
+			lcd16x2_printf("Temperature");
 
-			lcd16x2_setCursor(1, 9);
-			lcd16x2_printf("%.2f'C", temperature);
+			lcd16x2_setCursor(1, 8);
+			lcd16x2_printf("%.2f %cC", temperature, 223); //223 - celsius grad symbol
 			break;
 
 		case 1:
-			lcd16x2_printf("Setpoint: ");
+			lcd16x2_printf("Setpoint");
 
-			lcd16x2_setCursor(1, 9);
-			lcd16x2_printf("%.2f'C", setpoint);
+			lcd16x2_setCursor(1, 8);
+			lcd16x2_printf("%.2f %cC", setpoint, 223);
 			break;
 
 		case 2:
-			lcd16x2_printf("Heating: ");
+			lcd16x2_printf("Heating");
 
-			lcd16x2_setCursor(1, 14);
-			char text[5];
+			lcd16x2_setCursor(1, 12);
+			char text[2];
 			sprintf(text, "%d", duty/10);
 			lcd16x2_printf(text);
+
+			lcd16x2_setCursor(1, 15);
+			lcd16x2_printf("%c", 37); //% sign - 37 in ASCII table
 			break;
 	}
   }
