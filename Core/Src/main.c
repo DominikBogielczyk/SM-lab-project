@@ -191,6 +191,12 @@ int main(void)
 		prev_heating = duty/10;
 	}
 
+	if(!HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin))
+	{
+		HAL_UART_Transmit_IT(&huart3, &temperature, 4);
+		HAL_Delay(1000);
+	}
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -535,6 +541,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		PID();
 	}
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+	// RECIEVE A REFERENCE VALUE FOR TEMPERATURE
+	HAL_UART_Receive_IT(&huart3, &setpoint, 4);
 }
 
 /* USER CODE END 4 */
