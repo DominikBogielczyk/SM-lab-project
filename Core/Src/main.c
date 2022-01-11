@@ -183,12 +183,12 @@ int main(void)
   while (1)
   {
 
-	if((fabs(prev_temperature - temperature) > 0.1) && display_mode == 0)
+	if((fabs(prev_temperature - temperature) > 0.05) && display_mode == 0)
 	{
 		 update_display();
 		 prev_temperature = temperature;
 	}
-	else if(prev_heating != (duty/10))
+	else if(prev_heating != (duty/10) && display_mode == 2)
 	{
 		update_display();
 		prev_heating = duty/10;
@@ -546,6 +546,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if(htim-> Instance == TIM4)
 	{
 		PID();
+		sprintf(buf, "%.1f,%.1f\n", temperature, setpoint);
+		HAL_UART_Transmit(&huart2, buf, strlen(buf), 50);
 	}
 }
 
@@ -565,8 +567,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == B1_Pin)
 	{
-		sprintf(buf, "%Aktualna temperatura: %.1f%cC\r", temperature, 176);
-		HAL_UART_Transmit(&huart2, buf, strlen(buf), 50);
+		//sprintf(buf, "%Aktualna temperatura: %.1f%cC\r", temperature, 176);
+		//HAL_UART_Transmit(&huart2, buf, strlen(buf), 50);
 
 		display_mode += 1;
 		display_mode = display_mode % 3;
