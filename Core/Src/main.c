@@ -48,9 +48,14 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart2;
+<<<<<<< Updated upstream
+=======
+UART_HandleTypeDef huart3;
+>>>>>>> Stashed changes
 
 /* USER CODE BEGIN PV */
-uint8_t display_mode = 2; // 0 - temperature, 1 - setpoint, 2 - control signal
+uint8_t display_mode = 0; // 0 - temperature, 1 - setpoint, 2 - control signal
+uint8_t prev_display_mode = 0;
 
 //OBJECT PARAMETERS
 const float T = 475;
@@ -75,6 +80,9 @@ int prev_heating;
 //CONTROL SIGNAL
 uint16_t duty;
 
+char buf[50];
+uint8_t key[4];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -84,6 +92,11 @@ static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
+<<<<<<< Updated upstream
+=======
+static void MX_USART3_UART_Init(void);
+static void MX_USART2_UART_Init(void);
+>>>>>>> Stashed changes
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -125,6 +138,11 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM2_Init();
   MX_TIM4_Init();
+<<<<<<< Updated upstream
+=======
+  MX_USART3_UART_Init();
+  MX_USART2_UART_Init();
+>>>>>>> Stashed changes
   /* USER CODE BEGIN 2 */
 
   void update_display()
@@ -137,15 +155,15 @@ int main(void)
 		case 0:
 			lcd16x2_printf("Temperature");
 
-			lcd16x2_setCursor(1, 8);
-			lcd16x2_printf("%.2f %cC", temperature, 223); //223 - celsius grad symbol
+			lcd16x2_setCursor(1, 9);
+			lcd16x2_printf("%.1f %cC", temperature, 223); //223 - celsius grad symbol
 			break;
 
 		case 1:
 			lcd16x2_printf("Setpoint");
 
-			lcd16x2_setCursor(1, 8);
-			lcd16x2_printf("%.2f %cC", setpoint, 223);
+			lcd16x2_setCursor(1, 9);
+			lcd16x2_printf("%.1f %cC", setpoint, 223);
 			break;
 
 		case 2:
@@ -178,9 +196,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	temperature = BMP280_ReadTemperature();
 
-	if((fabs(prev_temperature - temperature) > 0.05) && display_mode == 0)
+	if((fabs(prev_temperature - temperature) > 0.1) && display_mode == 0)
 	{
 		 update_display();
 		 prev_temperature = temperature;
@@ -190,6 +207,19 @@ int main(void)
 		update_display();
 		prev_heating = duty/10;
 	}
+<<<<<<< Updated upstream
+=======
+	else if(prev_display_mode != display_mode)
+	{
+		prev_display_mode = display_mode;
+		update_display();
+	}
+
+	// RECIEVE A REFERENCE VALUE FOR TEMPERATURE
+	HAL_UART_Receive_IT(&huart2, key, 4);
+
+	HAL_Delay(1);
+>>>>>>> Stashed changes
 
     /* USER CODE END WHILE */
 
@@ -235,9 +265,17 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+<<<<<<< Updated upstream
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_I2C1
                               |RCC_PERIPHCLK_TIM2|RCC_PERIPHCLK_TIM34;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
+=======
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_USART3
+                              |RCC_PERIPHCLK_I2C1|RCC_PERIPHCLK_TIM2
+                              |RCC_PERIPHCLK_TIM34;
+  PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
+  PeriphClkInit.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
+>>>>>>> Stashed changes
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
   PeriphClkInit.Tim2ClockSelection = RCC_TIM2CLK_HCLK;
   PeriphClkInit.Tim34ClockSelection = RCC_TIM34CLK_HCLK;
@@ -413,6 +451,44 @@ static void MX_TIM4_Init(void)
 
 /**
   * @brief USART2 Initialization Function
+<<<<<<< Updated upstream
+=======
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * @brief USART3 Initialization Function
+>>>>>>> Stashed changes
   * @param None
   * @retval None
   */
@@ -490,11 +566,16 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
 void PID()
 {
+	temperature = BMP280_ReadTemperature();
 	float error = setpoint - temperature;
 	float u;
 
@@ -529,6 +610,33 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	}
 }
 
+<<<<<<< Updated upstream
+=======
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	setpoint = (key[0]-48) * 10.0 + (key[1]-48) * 1.0 + (key[3]-48) * 0.1;
+
+	lcd16x2_printf("Setpoint");
+	lcd16x2_setCursor(1, 9);
+	lcd16x2_printf("%.1f %cC", setpoint, 223);
+
+	display_mode = 1;
+
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == B1_Pin)
+	{
+		sprintf(buf, "%Aktualna temperatura: %.1f%cC\r", temperature, 176);
+		HAL_UART_Transmit(&huart2, buf, strlen(buf), 50);
+
+		display_mode += 1;
+		display_mode = display_mode % 3;
+	}
+}
+
+>>>>>>> Stashed changes
 /* USER CODE END 4 */
 
 /**
