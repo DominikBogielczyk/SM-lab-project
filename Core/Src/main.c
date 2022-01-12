@@ -44,6 +44,7 @@
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim4;
 
@@ -59,7 +60,7 @@ const float tau = 5;
 const float k = 4.4;
 
 //SETPOINT
-float setpoint = 30.0;
+float setpoint = 29.0;
 
 //DIGITAL PI PARAMETERS
 float Kp = 0.7*T/(tau*k);
@@ -79,6 +80,9 @@ uint16_t duty;
 char buf[50];
 uint8_t key[4];
 
+uint8_t encoder_value;
+uint8_t prev_encoder_value;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -88,6 +92,7 @@ static void MX_I2C1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -129,6 +134,7 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM4_Init();
   MX_USART2_UART_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
   void update_display()
@@ -169,6 +175,7 @@ int main(void)
   BMP280_Init(&hi2c1, 1, 3, 1); //temperature sensor
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1); //control signal
   HAL_TIM_Base_Start_IT(&htim4); //fixed sampling time Tp = 1sec
+  HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_ALL);
 
   lcd16x2_init_4bits(LCD_RS_GPIO_Port, LCD_RS_Pin, LCD_E_Pin,
         LCD_D4_GPIO_Port, LCD_D4_Pin, LCD_D5_Pin, LCD_D6_Pin, LCD_D7_Pin);
@@ -199,6 +206,38 @@ int main(void)
 		prev_display_mode = display_mode;
 		update_display();
 	}
+
+	encoder_value = __HAL_TIM_GET_COUNTER(&htim1);
+
+	if(encoder_value != prev_encoder_value)
+	{
+		if(encoder_value > prev_encoder_value - 1)
+		{
+			setpoint += 0.05;
+		}
+		else if(encoder_value < prev_encoder_value + 1)
+		{
+			setpoint -= 0.05;
+		}
+
+		if(setpoint > 31.0)
+		{
+			setpoint = 31.0;
+		}
+		else if(setpoint < 26.0)
+		{
+			setpoint = 26.0;
+		}
+
+		lcd16x2_printf("Setpoint");
+		lcd16x2_setCursor(1, 9);
+		lcd16x2_printf("%.1f %cC", setpoint, 223);
+
+		display_mode = 1;
+
+		prev_encoder_value = encoder_value;
+	}
+
 
 	// RECIEVE A REFERENCE VALUE FOR TEMPERATURE
 	HAL_UART_Receive_IT(&huart2, key, 4);
@@ -251,9 +290,11 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART2|RCC_PERIPHCLK_I2C1
-                              |RCC_PERIPHCLK_TIM2|RCC_PERIPHCLK_TIM34;
+                              |RCC_PERIPHCLK_TIM1|RCC_PERIPHCLK_TIM2
+                              |RCC_PERIPHCLK_TIM34;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
   PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
+  PeriphClkInit.Tim1ClockSelection = RCC_TIM1CLK_HCLK;
   PeriphClkInit.Tim2ClockSelection = RCC_TIM2CLK_HCLK;
   PeriphClkInit.Tim34ClockSelection = RCC_TIM34CLK_HCLK;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
@@ -305,6 +346,57 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_Encoder_InitTypeDef sConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 0;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 60;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  sConfig.EncoderMode = TIM_ENCODERMODE_TI12;
+  sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
+  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
+  sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
+  sConfig.IC1Filter = 0;
+  sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
+  sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
+  sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
+  sConfig.IC2Filter = 0;
+  if (HAL_TIM_Encoder_Init(&htim1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
 
 }
 
@@ -546,7 +638,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if(htim-> Instance == TIM4)
 	{
 		PID();
-		sprintf(buf, "%.1f,%.1f\n", temperature, setpoint);
+		sprintf(buf, "%.1f,%.1f,%d\n", temperature, setpoint,duty/10);
 		HAL_UART_Transmit(&huart2, buf, strlen(buf), 50);
 	}
 }
