@@ -99,6 +99,40 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void update_display()
+{
+	lcd16x2_clear();
+	lcd16x2_setCursor(0, 0);
+
+	switch(display_mode)
+	{
+		case 0:
+			lcd16x2_printf("Temperature");
+
+			lcd16x2_setCursor(1, 9);
+			lcd16x2_printf("%.1f %cC", temperature, 223); //223 - celsius grad symbol
+			break;
+
+		case 1:
+			lcd16x2_printf("Setpoint");
+
+			lcd16x2_setCursor(1, 9);
+			lcd16x2_printf("%.1f %cC", setpoint, 223);
+			break;
+
+		case 2:
+			lcd16x2_printf("Heating");
+
+			lcd16x2_setCursor(1, 12);
+			char text[2];
+			sprintf(text, "%d", duty/10);
+			lcd16x2_printf(text);
+
+			lcd16x2_setCursor(1, 15);
+			lcd16x2_printf("%c", 37); //% sign - 37 in ASCII table
+			break;
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -136,41 +170,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-
-  void update_display()
-  {
-	lcd16x2_clear();
-	lcd16x2_setCursor(0, 0);
-
-	switch(display_mode)
-	{
-		case 0:
-			lcd16x2_printf("Temperature");
-
-			lcd16x2_setCursor(1, 9);
-			lcd16x2_printf("%.1f %cC", temperature, 223); //223 - celsius grad symbol
-			break;
-
-		case 1:
-			lcd16x2_printf("Setpoint");
-
-			lcd16x2_setCursor(1, 9);
-			lcd16x2_printf("%.1f %cC", setpoint, 223);
-			break;
-
-		case 2:
-			lcd16x2_printf("Heating");
-
-			lcd16x2_setCursor(1, 12);
-			char text[2];
-			sprintf(text, "%d", duty/10);
-			lcd16x2_printf(text);
-
-			lcd16x2_setCursor(1, 15);
-			lcd16x2_printf("%c", 37); //% sign - 37 in ASCII table
-			break;
-	}
-  }
+  update_display(); // update LCD display
 
   BMP280_Init(&hi2c1, 1, 3, 1); //temperature sensor
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1); //control signal
@@ -181,8 +181,6 @@ int main(void)
         LCD_D4_GPIO_Port, LCD_D4_Pin, LCD_D5_Pin, LCD_D6_Pin, LCD_D7_Pin);
 
   lcd16x2_cursorShow(0);
-  update_display();
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
