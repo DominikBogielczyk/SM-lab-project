@@ -170,8 +170,6 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  update_display(); // update LCD display
-
   BMP280_Init(&hi2c1, 1, 3, 1); //temperature sensor
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1); //control signal
   HAL_TIM_Base_Start_IT(&htim4); //fixed sampling time Tp = 1sec
