@@ -60,7 +60,7 @@ const float tau = 5;
 const float k = 4.4;
 
 //SETPOINT
-float setpoint = 29.0;
+float setpoint = 26.0;
 
 //DIGITAL PI PARAMETERS
 float Kp = 0.7*T/(tau*k);
@@ -99,6 +99,40 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void update_display()
+  {
+	lcd16x2_clear();
+	lcd16x2_setCursor(0, 0);
+
+	switch(display_mode)
+	{
+		case 0:
+			lcd16x2_printf("Temperature");
+
+			lcd16x2_setCursor(1, 9);
+			lcd16x2_printf("%.1f %cC", temperature, 223); //223 - celsius grad symbol
+			break;
+
+		case 1:
+			lcd16x2_printf("Setpoint");
+
+			lcd16x2_setCursor(1, 9);
+			lcd16x2_printf("%.1f %cC", setpoint, 223);
+			break;
+
+		case 2:
+			lcd16x2_printf("Heating");
+
+			lcd16x2_setCursor(1, 12);
+			char text[2];
+			sprintf(text, "%d", duty/10);
+			lcd16x2_printf(text);
+
+			lcd16x2_setCursor(1, 15);
+			lcd16x2_printf("%c", 37); //% sign - 37 in ASCII table
+			break;
+	}
+  }
 
 /* USER CODE END 0 */
 
@@ -136,41 +170,6 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-
-  void update_display()
-  {
-	lcd16x2_clear();
-	lcd16x2_setCursor(0, 0);
-
-	switch(display_mode)
-	{
-		case 0:
-			lcd16x2_printf("Temperature");
-
-			lcd16x2_setCursor(1, 9);
-			lcd16x2_printf("%.1f %cC", temperature, 223); //223 - celsius grad symbol
-			break;
-
-		case 1:
-			lcd16x2_printf("Setpoint");
-
-			lcd16x2_setCursor(1, 9);
-			lcd16x2_printf("%.1f %cC", setpoint, 223);
-			break;
-
-		case 2:
-			lcd16x2_printf("Heating");
-
-			lcd16x2_setCursor(1, 12);
-			char text[2];
-			sprintf(text, "%d", duty/10);
-			lcd16x2_printf(text);
-
-			lcd16x2_setCursor(1, 15);
-			lcd16x2_printf("%c", 37); //% sign - 37 in ASCII table
-			break;
-	}
-  }
 
   BMP280_Init(&hi2c1, 1, 3, 1); //temperature sensor
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1); //control signal
@@ -229,9 +228,7 @@ int main(void)
 			setpoint = 26.0;
 		}
 
-		lcd16x2_printf("Setpoint");
-		lcd16x2_setCursor(1, 9);
-		lcd16x2_printf("%.1f %cC", setpoint, 223);
+		update_display();
 
 		display_mode = 1;
 
@@ -638,11 +635,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	if(htim-> Instance == TIM4)
 	{
 		PID();
-		sprintf(buf, "%.1f,%.1f,%d\n", temperature, setpoint,duty/10);
+
+		sprintf(buf, "%.3f, %.1f, %d\n\r", temperature, setpoint,duty/10);
 		HAL_UART_Transmit(&huart2, buf, strlen(buf), 50);
 	}
 }
-
+//RECEIVE SETPOINT VALUE VIA UART
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
 	setpoint = (key[0]-48) * 10.0 + (key[1]-48) * 1.0 + (key[3]-48) * 0.1;
@@ -650,18 +648,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	lcd16x2_printf("Setpoint");
 	lcd16x2_setCursor(1, 9);
 	lcd16x2_printf("%.1f %cC", setpoint, 223);
-
+	//update_display();
 	display_mode = 1;
-
 }
-
+//USER BUTTON INTERRUPT - DISPLAY MODE CHANGE
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == B1_Pin)
 	{
 		//sprintf(buf, "%Aktualna temperatura: %.1f%cC\r", temperature, 176);
 		//HAL_UART_Transmit(&huart2, buf, strlen(buf), 50);
-
 		display_mode += 1;
 		display_mode = display_mode % 3;
 	}
