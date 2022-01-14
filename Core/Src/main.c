@@ -60,7 +60,7 @@ const float tau = 5;
 const float k = 4.4;
 
 //SETPOINT
-float setpoint = 26.0;
+float setpoint = 28.0;
 
 //DIGITAL PI PARAMETERS
 float Kp = 0.7*T/(tau*k);
@@ -636,7 +636,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	{
 		PID();
 
-		sprintf(buf, "%.3f, %.1f, %d\n\r", temperature, setpoint,duty/10);
+		sprintf(buf, "%.2f, %.1f, %d\n\r", temperature, setpoint,duty/10);
 		HAL_UART_Transmit(&huart2, buf, strlen(buf), 50);
 	}
 }
